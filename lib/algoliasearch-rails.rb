@@ -550,6 +550,12 @@ module AlgoliaSearch
       nil
     end
 
+    def algolia_set_settings(synchronous = false)
+      index = SafeIndex.new(algolia_index_name, true)
+      task = index.set_settings(algoliasearch_settings.to_settings)
+      index.wait_task(task["taskID"]) if synchronous
+    end
+
     def algolia_index_objects(objects, synchronous = false)
       algolia_configurations.each do |options, settings|
         next if algolia_indexing_disabled?(options)
@@ -756,7 +762,9 @@ module AlgoliaSearch
       index_settings ||= settings.to_settings
       index_settings = options[:primary_settings].to_settings.merge(index_settings) if options[:inherit]
 
-      if !algolia_indexing_disabled?(options) && algoliasearch_settings_changed?(current_settings, index_settings)
+      options[:check_settings] = true if options[:check_settings].nil?
+
+      if !algolia_indexing_disabled?(options) && options[:check_settings] && algoliasearch_settings_changed?(current_settings, index_settings)
         used_slaves = !current_settings.nil? && !current_settings['slaves'].nil?
         replicas = index_settings.delete(:replicas) ||
                    index_settings.delete('replicas') ||
